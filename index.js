@@ -42,9 +42,9 @@ function CachedPersistence (opts) {
       var sub = decoded.subs[i]
       sub.clientId = clientId
       if (packet.topic === newSubTopic) {
-        if (!checkSubsForClient(sub, that._matcher.match(sub.topic))) {
-          that._matcher.add(sub.topic, sub)
-        }
+        // if (!checkSubsForClient(sub, that._matcher.match(sub.topic))) {
+        that._matcher.add(sub.topic, sub)
+        // }
       } else if (packet.topic === rmSubTopic) {
         that._matcher
           .match(sub.topic)
@@ -225,14 +225,14 @@ Object.defineProperty(CachedPersistence.prototype, 'broker', {
   }
 })
 
-function checkSubsForClient (sub, savedSubs) {
-  for (var i = 0; i < savedSubs.length; i++) {
-    if (sub.topic === savedSubs[i].topic && sub.clientId === savedSubs[i].clientId) {
-      return true
-    }
-  }
-  return false
-}
+// function checkSubsForClient (sub, savedSubs) {
+//   for (var i = 0; i < savedSubs.length; i++) {
+//     if (sub.topic === savedSubs[i].topic && sub.clientId === savedSubs[i].clientId) {
+//       return true
+//     }
+//   }
+//   return false
+// }
 
 module.exports = CachedPersistence
 module.exports.Packet = Packet
