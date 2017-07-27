@@ -1,6 +1,6 @@
 'use strict'
 
-var Qlobber = require('qlobber').Qlobber
+var Qlobber = require('qlobber').QlobberDedup
 var Packet = require('aedes-packet')
 var EE = require('events').EventEmitter
 var inherits = require('util').inherits
@@ -42,14 +42,11 @@ function CachedPersistence (opts) {
       var sub = decoded.subs[i]
       sub.clientId = clientId
       if (packet.topic === newSubTopic) {
-        if (!checkSubsForClient(sub, that._matcher.match(sub.topic))) {
-          that._matcher.add(sub.topic, sub)
-        }
+        // if (!checkSubsForClient(sub, that._matcher.match(sub.topic))) {
+        that._matcher.add(sub.topic, sub.clientId)
+        // }
       } else if (packet.topic === rmSubTopic) {
-        that._matcher
-          .match(sub.topic)
-          .filter(matching, sub)
-          .forEach(rmSub, that._matcher)
+        that._matcher.remove(sub.topic, sub.clientId)
       }
     }
     var action = packet.topic === newSubTopic ? 'sub' : 'unsub'
@@ -60,14 +57,6 @@ function CachedPersistence (opts) {
     }
     cb()
   }
-}
-
-function matching (sub) {
-  return sub.topic === this.topic && sub.clientId === this.clientId
-}
-
-function rmSub (sub) {
-  this.remove(sub.topic, sub)
 }
 
 inherits(CachedPersistence, EE)
@@ -165,7 +154,7 @@ CachedPersistence.prototype.subscriptionsByTopic = function (topic, cb) {
     return this
   }
 
-  cb(null, this._matcher.match(topic))
+  cb(null, Array.from(this._matcher.match(topic)))
 }
 
 CachedPersistence.prototype.cleanSubscriptions = function (client, cb) {
@@ -225,14 +214,14 @@ Object.defineProperty(CachedPersistence.prototype, 'broker', {
   }
 })
 
-function checkSubsForClient (sub, savedSubs) {
-  for (var i = 0; i < savedSubs.length; i++) {
-    if (sub.topic === savedSubs[i].topic && sub.clientId === savedSubs[i].clientId) {
-      return true
-    }
-  }
-  return false
-}
+// function checkSubsForClient (sub, savedSubs) {
+//   for (var i = 0; i < savedSubs.length; i++) {
+//     if (sub.topic === savedSubs[i].topic && sub.clientId === savedSubs[i].clientId) {
+//       return true
+//     }
+//   }
+//   return false
+// }
 
 module.exports = CachedPersistence
 module.exports.Packet = Packet
