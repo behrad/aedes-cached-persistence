@@ -42,7 +42,7 @@ function CachedPersistence (opts) {
       var sub = decoded.subs[i]
       sub.clientId = clientId
       if (packet.topic === newSubTopic) {
-        if (that._matcher.test(sub.topic, sub)) {
+        if (!that._matcher.test(sub.topic, sub)) {
           that._matcher.add(sub.topic, sub)
         }
       } else if (packet.topic === rmSubTopic) {
