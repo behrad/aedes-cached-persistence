@@ -56,11 +56,11 @@ MyPersistence.prototype.addSubscriptions = function (client, subs, cb) {
 
   subsObjs.forEach(function eachSub (sub) {
     if (sub.qos > 0) {
-      if (Array.from(that._matcher.match(sub.topic)).length === 0) {
-        that._subscriptionsCount++
-        that._matcher.add(sub.topic, sub.clientId)
-        stored.push(sub)
-      }
+      // if (Array.from(that._matcher.match(sub.topic)).length === 0) {
+      that._subscriptionsCount++
+      that._matcher.add(sub.topic, sub.clientId + ';' + sub.topic + ';' + sub.qos)
+      stored.push(sub)
+      // }
     } else {
       if (!checkSubsForClient(sub, that._subscriptions[client.id])) {
         stored.push(sub)

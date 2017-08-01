@@ -42,16 +42,15 @@ function CachedPersistence (opts) {
       var sub = decoded.subs[i]
       sub.clientId = clientId
       if (packet.topic === newSubTopic) {
-        // if (!checkSubsForClient(sub, that._matcher.match(sub.topic))) {
-        that._matcher.add(sub.topic, sub.clientId)
-        // }
+        that._matcher.add(sub.topic, sub.clientId + ';' + sub.topic + ';' + sub.qos)
       } else if (packet.topic === rmSubTopic) {
-        that._matcher.remove(sub.topic, sub.clientId)
+        that._matcher.remove(sub.topic, sub.clientId + ';' + sub.topic + ';' + sub.qos)
       }
     }
     var action = packet.topic === newSubTopic ? 'sub' : 'unsub'
-    var waiting = that._waiting[clientId + '-' + action]
-    delete that._waiting[clientId + '-' + action]
+    var clientCbHandle = clientId + '-' + action
+    var waiting = that._waiting[clientCbHandle]
+    that._waiting[clientCbHandle] = null
     if (waiting) {
       process.nextTick(waiting)
     }
@@ -154,7 +153,14 @@ CachedPersistence.prototype.subscriptionsByTopic = function (topic, cb) {
     return this
   }
 
-  cb(null, Array.from(this._matcher.match(topic)))
+  cb(null, Array.from(this._matcher.match(topic)).map(function (m) {
+    var parts = m.split(';')
+    return {
+      clientId: parts[0],
+      topic: parts[1],
+      qos: +parts[2]
+    }
+  }))
 }
 
 CachedPersistence.prototype.cleanSubscriptions = function (client, cb) {
