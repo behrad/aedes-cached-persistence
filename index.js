@@ -1,6 +1,6 @@
 'use strict'
 
-var Qlobber = require('qlobber').Qlobber
+var QlobberSub = require('aedes-persistence/qlobber-sub')
 var Packet = require('aedes-packet')
 var EE = require('events').EventEmitter
 var inherits = require('util').inherits
@@ -42,8 +42,10 @@ function CachedPersistence (opts) {
       var sub = decoded.subs[i]
       sub.clientId = clientId
       if (packet.topic === newSubTopic) {
-        if (!that._matcher.test(sub.topic, sub)) {
+        if (sub.qos > 0) {
           that._matcher.add(sub.topic, sub)
+        } else {
+          that._matcher.remove(sub.topic, sub)
         }
       } else if (packet.topic === rmSubTopic) {
         that._matcher.remove(sub.topic, sub)
@@ -82,7 +84,6 @@ CachedPersistence.prototype._addedSubscriptions = function (client, subs, cb) {
     }
   })
 
-  subs = subs.filter(qosGreaterThanOne)
   if (subs.length === 0) {
     return cb(null, client)
   }
@@ -100,10 +101,6 @@ CachedPersistence.prototype._addedSubscriptions = function (client, subs, cb) {
       cb(err)
     }
   })
-}
-
-function qosGreaterThanOne (sub) {
-  return sub.qos > 0
 }
 
 function brokerPublish (subs, cb) {
@@ -216,51 +213,3 @@ Object.defineProperty(CachedPersistence.prototype, 'broker', {
 
 module.exports = CachedPersistence
 module.exports.Packet = Packet
-
-function QlobberSub (options) {
-  Qlobber.call(this, options)
-}
-
-inherits(QlobberSub, Qlobber)
-
-QlobberSub.prototype._initial_value = function (val) {
-  var topicMap = new Map().set(val.topic, val.qos)
-  return new Map().set(val.clientId, topicMap)
-}
-
-QlobberSub.prototype._add_value = function (clientMap, val) {
-  var topicMap = clientMap.get(val.clientId)
-  if (!topicMap) {
-    topicMap = new Map()
-    clientMap.set(val.clientId, topicMap)
-  }
-  topicMap.set(val.topic, val.qos)
-}
-
-QlobberSub.prototype._add_values = function (dest, clientMap) {
-  for (var [clientId, topicMap] of clientMap) {
-    for (var [topic, qos] of topicMap) {
-      dest.push({ clientId: clientId, topic: topic, qos: qos })
-    }
-  }
-}
-
-QlobberSub.prototype._remove_value = function (clientMap, val) {
-  var topicMap = clientMap.get(val.clientId)
-  if (topicMap) {
-    topicMap.delete(val.topic)
-    if (topicMap.size === 0) {
-      clientMap.delete(val.clientId)
-    }
-  }
-  return clientMap.size === 0
-}
-
-QlobberSub.prototype.test_values = function (clientMap, val) {
-  var topicMap = clientMap.get(val.clientId)
-  return topicMap && topicMap.has(val.topic)
-}
-
-QlobberSub.prototype.match = function (topic) {
-  return this._match([], 0, topic.split(this._separator), this._trie)
-}
